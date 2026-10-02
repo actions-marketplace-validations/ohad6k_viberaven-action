@@ -1,10 +1,33 @@
 name: self-test
 on: [push, pull_request]
 jobs:
-  test:
+  clean:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: ./
+      - id: vr
+        uses: ./
         with:
           comment: 'false'
+  finds-blockers:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: action
+      - name: Write a fixture app with known mistakes
+        run: |
+          mkdir -p supabase/migrations
+          echo '{"name":"fixture","dependencies":{"next":"15.0.0","@supabase/supabase-js":"2.45.0"}}' > package.json
+          printf 'NEXT_PUBLIC_SUPABASE_URL=https://x.supabase.co\nNEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY=placeholder\n' > .env.example
+          echo 'create table public.profiles (id uuid primary key, email text);' > supabase/migrations/0001_init.sql
+      - id: vr
+        uses: ./action
+        with:
+          comment: 'false'
+      - name: Expect blockers
+        run: |
+          echo "exit-code=${{ steps.vr.outputs.exit-code }}"
+          test "${{ steps.vr.outputs.exit-code }}" = "1"
+          grep -q rls_disabled viberaven-check.md
+          grep -q service_role_key_in_client_env viberaven-check.md
