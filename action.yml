@@ -1,0 +1,62 @@
+name: 'VibeRaven Supabase launch check'
+description: 'Flags Supabase tables without RLS, open policies, service role keys in client code and unsigned Stripe webhooks in AI-built repos.'
+author: 'ohad6k'
+branding:
+  icon: 'shield'
+  color: 'green'
+inputs:
+  version:
+    description: 'viberaven npm version to run'
+    default: '1.6.1'
+  fail-on-blockers:
+    description: 'Fail the job when the check finds a blocker (advice only by default)'
+    default: 'false'
+  comment:
+    description: 'Comment the result on the pull request, or on the commit for a push'
+    default: 'true'
+  token:
+    description: 'Token used to comment'
+    default: ${{ github.token }}
+outputs:
+  exit-code:
+    description: '1 when blockers were found, 0 otherwise'
+    value: ${{ steps.check.outputs.code }}
+runs:
+  using: 'composite'
+  steps:
+    - uses: actions/setup-node@v4
+      with:
+        node-version: 20
+    - id: check
+      shell: bash
+      env:
+        VR_VERSION: ${{ inputs.version }}
+        BASE_REF: ${{ github.base_ref }}
+      run: |
+        code=0
+        if [ -n "$BASE_REF" ]; then
+          git fetch --no-tags --depth=200 origin "$BASE_REF" >/dev/null 2>&1 || true
+          npx -y "viberaven@$VR_VERSION" check --base "origin/$BASE_REF" --markdown > viberaven-check.md || code=$?
+        else
+          { echo '<!-- viberaven-check -->'; echo '### VibeRaven launch check'; echo; echo '```text'; npx -y "viberaven@$VR_VERSION" check . || code=$?; echo '```'; } > viberaven-check.md 2>&1
+        fi
+        cat viberaven-check.md >> "$GITHUB_STEP_SUMMARY"
+        echo "code=$code" >> "$GITHUB_OUTPUT"
+    - if: inputs.comment == 'true'
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.token }}
+        PR: ${{ github.event.pull_request.number }}
+        HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+      run: |
+        if [ -n "$PR" ]; then
+          [ "$HEAD_REPO" = "$GITHUB_REPOSITORY" ] || exit 0
+          id=$(gh api "repos/$GITHUB_REPOSITORY/issues/$PR/comments" --paginate --jq '.[] | select(.body | contains("<!-- viberaven-check -->")) | .id' | tail -n 1)
+          if [ -n "$id" ]; then gh api --method PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$id" -F body=@viberaven-check.md >/dev/null
+          else gh pr comment "$PR" --repo "$GITHUB_REPOSITORY" --body-file viberaven-check.md; fi
+        elif [ "${{ steps.check.outputs.code }}" = "1" ]; then
+          gh api --method POST "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/comments" -F body=@viberaven-check.md >/dev/null || true
+        fi
+    - if: inputs.fail-on-blockers == 'true' && steps.check.outputs.code == '1'
+      shell: bash
+      run: exit 1
