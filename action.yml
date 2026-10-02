@@ -1,5 +1,5 @@
 name: 'VibeRaven Supabase launch check'
-description: 'Flags Supabase tables without RLS, open policies, service role keys in client code and unsigned Stripe webhooks in AI-built repos.'
+description: 'Flags Supabase tables without RLS, open policies and leaked service role keys in AI-built repos.'
 author: 'ohad6k'
 branding:
   icon: 'shield'
