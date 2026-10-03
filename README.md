@@ -1,7 +1,7 @@
 # VibeRaven Supabase launch check
 
 A GitHub Action for apps built with Lovable, Bolt, Cursor or Claude Code on Supabase and Vercel.
-It reads the repository on your own runner and flags what the agent left open before it ships:
+It reads the repository on your own runner and flags what the agent left open:
 
 - tables created in migrations without row level security
 - policies like `using (true)` that let anyone read, update or delete every row
@@ -36,7 +36,7 @@ jobs:
 ```
 
 On a pull request you get one comment with what this change added or fixed, updated on every push.
-On a push to `main` you get a commit comment only when there is a blocker, plus the job summary every time.
+On a push to `main` you get a commit comment only when there is a blocker, plus the job summary every time. If your host deploys on that same push (Vercel, Lovable, Bolt), the check runs alongside the deploy, not before it; use pull requests when you want the result before anything ships.
 
 To block merges on new blockers: `with: { fail-on-blockers: 'true' }`.
 
