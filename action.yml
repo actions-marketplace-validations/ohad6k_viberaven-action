@@ -36,7 +36,7 @@ runs:
       run: |
         code=0
         if [ -n "$BASE_REF" ]; then
-          git fetch --no-tags --depth=200 origin "$BASE_REF" >/dev/null 2>&1 || true
+          git fetch --no-tags --depth=200 origin "$BASE_REF:refs/remotes/origin/$BASE_REF" >/dev/null 2>&1 || true
           npx -y "viberaven@$VR_VERSION" check --base "origin/$BASE_REF" --markdown > viberaven-check.md || code=$?
         else
           { echo '<!-- viberaven-check -->'; echo '### VibeRaven launch check'; echo; echo '```text'; npx -y "viberaven@$VR_VERSION" check . || code=$?; echo '```'; } > viberaven-check.md 2>&1
