@@ -13,8 +13,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-        with:
-          path: action
       - name: Write a fixture app with known mistakes
         run: |
           mkdir -p supabase/migrations
@@ -22,7 +20,7 @@ jobs:
           printf 'NEXT_PUBLIC_SUPABASE_URL=https://x.supabase.co\nNEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY=placeholder\n' > .env.example
           echo 'create table public.profiles (id uuid primary key, email text);' > supabase/migrations/0001_init.sql
       - id: vr
-        uses: ./action
+        uses: ./
         with:
           comment: 'false'
       - name: Expect blockers
